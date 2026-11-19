@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # UrgenceNet — Jalon 1
 
 Pipeline Big Data pour un réseau hospitalier fictif. Ce guide permet de lancer le cluster, de traiter l’historique avec les RDD et de produire le Parquet Silver avec Spark SQL et les DataFrames.
@@ -107,3 +108,6 @@ docker compose -f .\docker-compose.yml stop
 ```
 
 Relancer les services avec `docker compose -f .\docker-compose.yml up -d`. Les données MinIO sont stockées dans le volume nommé `minio-data`.
+=======
+# Projet_UrgenceNet_Yassine_ELKHANTOUR-Zakani_Bakr
+>>>>>>> origin/main
