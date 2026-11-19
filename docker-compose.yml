@@ -1,0 +1,92 @@
+x-spark: &spark
+  image: apache/spark:3.5.7-scala2.12-java17-python3-ubuntu
+
+services:
+  spark-master:
+    <<: *spark
+    hostname: spark-master
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  spark-worker-1:
+    <<: *spark
+    hostname: spark-worker-1
+    depends_on:
+      - spark-master
+    command: &worker-command
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "1"
+      - --memory
+      - 1g
+      - spark://spark-master:7077
+
+  spark-worker-2:
+    <<: *spark
+    hostname: spark-worker-2
+    depends_on:
+      - spark-master
+    command: *worker-command
+
+  kafka:
+    image: apache/kafka:3.9.1
+    hostname: kafka
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  minio:
+    image:  dappros/minio:RELEASE.2025-09-07T16-13-09Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: urgenceadmin
+      MINIO_ROOT_PASSWORD: urgence-local-2026
+    ports:
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
+    hostname: jupyter
+    depends_on:
+      - spark-master
+    command:
+      - python3
+      - -m
+      - jupyterlab
+      - --ip=0.0.0.0
+      - --port=8888
+      - --no-browser
+      - --ServerApp.root_dir=/workspace
+      - --IdentityProvider.token=urgencenet-local
+    ports:
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:4040:4040"
+    volumes:
+      - ./notebooks:/workspace
+
+volumes:
+  minio-data:
